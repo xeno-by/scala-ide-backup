@@ -89,11 +89,13 @@ object ImplicitHighlightingPresenter {
     }
 
     def mkMacroExpansionAnnotation(t: Tree) = {
-      val Some(macroExpansionAttachment) = t.attachments.get[compiler.analyzer.MacroExpansionAttachment]
-      val originalMacroPos = macroExpansionAttachment.expandee.pos
-      if (macroExpansionAttachment.expandee.symbol.fullName == "scala.reflect.materializeClassTag") None
+      val Some(att) = t.attachments.get[java.util.HashMap[String, Any]]
+      val expandeeTree = att.get("expandeeTree").asInstanceOf[Tree]
+      val expansionString = att.get("expansionString").asInstanceOf[String]
+      val originalMacroPos = expandeeTree.pos
+      if (expandeeTree.symbol.fullName == "scala.reflect.materializeClassTag") None
       else{
-        val annotation = new MacroExpansionAnnotation(compiler.showCode(macroExpansionAttachment.expanded.asInstanceOf[Tree]))
+        val annotation = new MacroExpansionAnnotation(expansionString)
         val pos = new Position(originalMacroPos.start,originalMacroPos.end - originalMacroPos.start)
         Some(annotation, pos)
       }
@@ -112,7 +114,7 @@ object ImplicitHighlightingPresenter {
           case v: ApplyToImplicitArgs if !pluginStore.getBoolean(ImplicitsPreferencePage.P_CONVERSIONS_ONLY) =>
             val (annotation, pos) = mkImplicitArgumentAnnotation(v)
             implicits += (annotation -> pos)
-          case v if v.attachments.get[compiler.analyzer.MacroExpansionAttachment].isDefined =>
+          case v if v.attachments.get[java.util.HashMap[String, Any]].isDefined =>
             mkMacroExpansionAnnotation(v).map(macroExpansionAnnotation => {
               val (annotation, pos) = macroExpansionAnnotation
               macroExpansions += (annotation -> pos)
